@@ -1,0 +1,48 @@
+---
+title: "Bakery_prediction_ML"
+author: "Philipp Meisinger"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Goal of the project
+
+Given a data set of sales per day per type of product for a bakery, the goal is to predict the sales per category of this bakery using a machine learning algorithm. This Markdown file is intended to document the learning process and therefore includes wrong turns and try outs. A later presentation of the results can be realized in a separate file if needed.
+
+## 1. The data we work with
+
+We do not know, where exactly the bakery is located, apart from the bigger region of Kiel. The following section will look into what the data set provides. Visual measures are applied to better understand the data itself and have a bedrock which allows us to adapt it subsequently.
+
+### 1.1 Loading in required 'r' libraries
+
+```{r, echo = FALSE}
+# We do not want this code block to be depicted, so we add "echo = FALSE" in the declaration of the chunk
+library(readr)
+library(dplyr)
+library(lubridate) # allows management of date-related variables
+library(stringr)
+library(reticulate) # allows the installation of a python environment inside the R environment
+library(ggplot2) # allows easier plotting of data
+library(VIM) # allows adjustment of data and imputations for missing values
+```
+
+### 1.2 Loading in the data sets
+
+```{r, echo = FALSE}
+df <- read.csv("/data_srs/umsatzdaten_gekuerzt.csv")
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
