@@ -95,8 +95,8 @@ data$week <- lubridate::week(ymd(data$Datum))
 # We can see, that the week seems to start on Tuesdays, rather than Mondays, which we will accept for now.
 ```
 
-### 1.4.2 Manipulation of data
-The goal of this section is to fill in missing values and or to delete douplicate instances.
+#### 1.4.2 Manipulation of data
+The goal of this section is to fill in missing values and or to delete duplicate instances.
 
 ```{r}
 # We check if there are any missing values in the variables.
@@ -122,10 +122,22 @@ data$Ferien[is.na(data$Ferien)] <- 0
 sum(is.na(data$KielerWoche))
 sum(is.na(data$Feiertag))
 sum(is.na(data$Ferien))
+### Concerning the Weather codes, the data is wildly missing, which might even prove to be more restricting to the model, which is why we'll remove that column all together:
+data <- data %>% select(-Wettercode)
 
 ```
 
+#### 1.4.3 Imputation of data using the VIM package
+
 ```{r}
+# Values on Temperature and Wind speed are missing the same amount of times, indicating a measuring device in maintenance. These values we can fill in using the hotdeck-imputation method.
+# let's have a look at the data once more using the VIM package aggregation plot:
+data %>% aggr(combined=TRUE, numbers=TRUE)
+
+# Hotdeck imputation fills in the values with similar ones
+data_hotdeck_1 <- data %>% hotdeck()
+data_hotdeck_1 %>% aggr(combined=TRUE, numbers=TRUE)
+sum(is.na(data_hotdeck_1))
 ```
 
 ```{r}
