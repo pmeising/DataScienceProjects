@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
 ## Goal of the project
@@ -21,6 +21,7 @@ We do not know, where exactly the bakery is located, apart from the bigger regio
 
 ```{r, echo = FALSE}
 # We do not want this code block to be depicted, so we add "echo = FALSE" in the declaration of the chunk
+knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(dplyr)
 library(lubridate) # allows management of date-related variables
@@ -32,9 +33,114 @@ library(VIM) # allows adjustment of data and imputations for missing values
 
 ### 1.2 Loading in the data sets
 
-```{r, echo = FALSE}
-df <- read.csv("/data_srs/umsatzdaten_gekuerzt.csv")
+```{r}
+sale_data <- read_csv("data_srcs/umsatzdaten_gekuerzt.csv", show_col_types = FALSE)
+kiwo <- read_csv("data_srcs/kiwo.csv", show_col_types = FALSE)
+weather <- read_csv("data_srcs/wetter.csv", show_col_types = FALSE)
+school_holiday <- read_csv("data_srcs/ferien-sh.csv", show_col_types = FALSE)
+public_holiday <- read_csv("data_srcs/feiertage.csv", show_col_types = FALSE)
+```
 
+### 1.3 First plotting of the primary data set
+
+The goal here is to get an understanding of the data, any correlations or seasonality is of interest. The more we understand about the primary data set, the better we can come up with own variables that describe such a correlation.
+
+```{r}
+# Firstly, a point plot of sales
+ggplot(sale_data, aes(x = Datum, y = Umsatz)) + geom_point()
+# We can see strong indications, that once a year, there is a day with especially high sales. We can zoom in on that:
+ggplot(sale_data, aes(x = Datum, y = Umsatz>1000)) + geom_point()
+#This shows that there is a high repetivity of this highest of sales days. Let's see, which dates the highest sale takes place:
+# The select() function does not help much
+#     select(sale_data$Umsatz)
+# We can choose a different method filter():
+highest_sales <- filter(sale_data, Umsatz>1000)
+ggplot(highest_sales, aes(x = Datum, y = Umsatz)) + geom_point()
+highest_sales
+# We can see, that there is a repeating pattern of the highest sale of the year occurring on New Years Eve. Also, we see, that the biggest sale belongs to the category 5 of products.
+
+# What also becomes apparent is that there is clear seasonal differences across the time span, which repeat year to year. 
+# In order to dive deeper into this and understand for example which weekday the most is sold, or which month of the year, at which weather condition etc. it becomes necessary to join the remaining data sets together.
+```
+
+### 1.4 Adjustment and joining of data sets
+
+We want to be able to look at the data in one big data set, which allows cross references and depict direct correlations. In order to achieve this, we have to manipulate or typecast (i.e. changing of one data type to another) the variables involved. Since the common denominator for this data is going to be the date, we are going to need this variable in the same data type in both sets. Since the NN can't work too well with non-numeric values, we are going to use the "date" data type.
+#### 1.4.1 Joining of data
+```{r}
+#First, we check, if all the data sets' "Datum"-variables have the same data type:
+weather
+kiwo
+public_holiday
+school_holiday
+sale_data
+## The Date (i.e. "Datum") variable already seems to be of 'date' data type. We can go ahead and join them.
+data <- left_join(sale_data, weather, by="Datum")
+data <- left_join(data, kiwo, by="Datum")
+data <- left_join(data, public_holiday, by="Datum")
+data <- left_join(data, school_holiday, by="Datum")
+# The data is now combined into one data set, but we want to include another variable called weekday (i.e. Monday, Tuesday etc.). This is done using the 'weekdays()' function.
+data$weekday <- weekdays(data$Datum)
+# A new column is created populated by the day of the week
+
+# However, the NN can not work as easily with char data types, so we have to dummy-encode the weekdays, so that Monday = 1, Tuesday = 2, Wednesday = 3 etc.
+data$weekday <- as.integer(factor(data$weekday,levels=c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"),ordered=TRUE))
+
+# We saw in the initial plots, that we have a strong seasonality in the data. To highlight this, we may want to introduce another variable called "month" and perhaps one called "week". Representing the month and the week of the year respectively. This can be achieved by using the 'month()' function of the lubridate library
+data$month <- month(data$Datum, label = TRUE)
+# The names of the months are now arrtibuted in a separate column. However, we can dummy-code these, so that the 7th. month of the year receives the value 7.
+data$month <- month(data$Datum, label = FALSE)
+# Let's do the same for the weeks of the year.
+data$week <- lubridate::week(ymd(data$Datum))
+# We can see, that the week seems to start on Tuesdays, rather than Mondays, which we will accept for now.
+```
+
+### 1.4.2 Manipulation of data
+The goal of this section is to fill in missing values and or to delete douplicate instances.
+
+```{r}
+# We check if there are any missing values in the variables.
+sum(is.na(data$Datum))
+sum(is.na(data$Warengruppe))
+sum(is.na(data$Umsatz))
+sum(is.na(data$Bewoelkung))
+sum(is.na(data$Temperatur))
+sum(is.na(data$Windgeschwindigkeit))
+sum(is.na(data$Wettercode))
+sum(is.na(data$KielerWoche))
+sum(is.na(data$Feiertag))
+sum(is.na(data$Ferien))
+sum(is.na(data$weekday))
+sum(is.na(data$month))
+sum(is.na(data$week))
+# Out of all the variables, there are 7 which have missing values.
+## For the variables 'KielerWoche', 'Feiertag' and 'Ferien' there are many missing values, because the dates at which this event is not true, the joining of data sets simply put an NA. This we can replace with a 0, so that our NN later on can work with this data.
+data$KielerWoche[is.na(data$KielerWoche)] <- 0
+data$Feiertag[is.na(data$Feiertag)] <- 0
+data$Ferien[is.na(data$Ferien)] <- 0
+# missing values eliminated:
+sum(is.na(data$KielerWoche))
+sum(is.na(data$Feiertag))
+sum(is.na(data$Ferien))
+
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
 ```
 
 ## Including Plots
