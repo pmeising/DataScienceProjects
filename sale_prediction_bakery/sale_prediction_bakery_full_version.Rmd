@@ -15,7 +15,7 @@ Given a data set of sales per day per type of product for a bakery, the goal is 
 
 ## 1. The data we work with
 
-We do not know, where exactly the bakery is located, apart from the bigger region of Kiel. The following section will look into what the data set provides. Visual measures are applied to better understand the data itself and have a bedrock which allows us to adapt it subsequently.
+We do not know, where exactly the bakery is located, apart from the bigger region of Kiel - Germany. The following section will look into what the data set provides. Visual measures are applied to better understand the data itself and have a bedrock which allows us to adapt it subsequently.
 
 ### 1.1 Loading in required 'r' libraries
 
@@ -66,7 +66,9 @@ highest_sales
 ### 1.4 Adjustment and joining of data sets
 
 We want to be able to look at the data in one big data set, which allows cross references and depict direct correlations. In order to achieve this, we have to manipulate or typecast (i.e. changing of one data type to another) the variables involved. Since the common denominator for this data is going to be the date, we are going to need this variable in the same data type in both sets. Since the NN can't work too well with non-numeric values, we are going to use the "date" data type.
+
 #### 1.4.1 Joining of data
+
 ```{r}
 #First, we check, if all the data sets' "Datum"-variables have the same data type:
 weather
@@ -96,6 +98,7 @@ data$week <- lubridate::week(ymd(data$Datum))
 ```
 
 #### 1.4.2 Manipulation of data
+
 The goal of this section is to fill in missing values and or to delete duplicate instances.
 
 ```{r}
@@ -140,7 +143,40 @@ data_hotdeck_1 %>% aggr(combined=TRUE, numbers=TRUE)
 sum(is.na(data_hotdeck_1))
 ```
 
+### 1.5 Plotting of cleaned up data set
+Here we want to get a global view of the data and its variables. As seen before, there are some qualities to it, which indicate patterns. Since we added a couple of further variables as well as filled up missing values, we can now get a grand view of the data. This section is going to include a variety of plots, which hopefully show correlations or further patterns.
+
+#### 1.5.1 Barplots and sample taking
+The exercise requires us to plot bar plots with confidence intervals. Confidence intervals only make sense, if one is unable to understand the entirety of the data to be analyzed. In these cases we might take a sample from a bigger data set. The confidence interval here tells us how certain we are, that this analysis is applicable to the grander data.
+Link to barplots with confidence intervals: https://r-graph-gallery.com/4-barplot-with-error-bar.html
+
 ```{r}
+# Let's find out, how the weekday affects the sale. For this, we can plot simply the average sale to the day of the week. Let's calculate the average per weekday:
+# first we select the rows where weekday == 1
+mon <- data_hotdeck_1[data_hotdeck_1$weekday == 1, ]
+# then we take the average of sales
+mon_av <- mean(mon$Umsatz)
+mon_av
+## This would have to be done for each weekday, then joined into a big data set itself and then plotted. However, I feel like there should be an easier way to do this.
+
+weekday_plot <- ggplot(data_hotdeck_1, aes(x = weekday, y = Umsatz)) + geom_bar(stat="identity")
+weekday_plot
+
+## that was a failed attempt...
+mon_av <- mean(filter(data_hotdeck_1, weekday == 1)$Umsatz)
+tue_av <- mean(filter(data_hotdeck_1, weekday == 2)$Umsatz)
+wed_av <- mean(filter(data_hotdeck_1, weekday == 3)$Umsatz)
+thr_av <- mean(filter(data_hotdeck_1, weekday == 4)$Umsatz)
+fri_av <- mean(filter(data_hotdeck_1, weekday == 5)$Umsatz)
+sat_av <- mean(filter(data_hotdeck_1, weekday == 6)$Umsatz)
+sun_av <- mean(filter(data_hotdeck_1, weekday == 7)$Umsatz)
+
+weekday_av
+weekday_av$Umsatz <- c(mon_av, tue_av, wed_av, thr_av, fri_av, sat_av, sun_av)
+# weekday_av$index <- c(1:7)
+weekday_av
+plot(weekday_av)
+ggplot(weekday_av)
 ```
 
 ```{r}
